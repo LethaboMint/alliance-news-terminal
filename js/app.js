@@ -16,8 +16,36 @@ const App = {
             this.updateTickerStrip();
         });
         
+        // Fetch from Supabase
+        this.fetchFromSupabase();
+        
         // Initial render
         this.renderCurrentRoute();
+    },
+    
+    async fetchFromSupabase() {
+        document.getElementById('data-status-text').textContent = "Fetching from Supabase...";
+        try {
+            // Get the public URL for the feed.xml file in the news-data bucket
+            const { data } = window.supabaseClient.storage.from('news-data').getPublicUrl('feed.xml');
+            
+            if (data && data.publicUrl) {
+                // Fetch the actual XML content
+                const response = await fetch(data.publicUrl);
+                if (response.ok) {
+                    const xmlString = await response.text();
+                    const newArticles = window.AllianceNewsParser.parse(xmlString);
+                    if (newArticles.length > 0) {
+                        window.AppStore.addArticles(newArticles);
+                    }
+                } else {
+                    document.getElementById('data-status-text').textContent = "No data found";
+                }
+            }
+        } catch (error) {
+            console.error("Supabase fetch error:", error);
+            document.getElementById('data-status-text').textContent = "Connection Error";
+        }
     },
     
     setupNavigation() {
