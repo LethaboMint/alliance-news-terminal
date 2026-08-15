@@ -26,25 +26,26 @@ const App = {
     async fetchFromSupabase() {
         document.getElementById('data-status-text').textContent = "Fetching from Supabase...";
         try {
-            // Get the public URL for the feed.xml file in the news-data bucket
-            const { data } = window.supabaseClient.storage.from('news-data').getPublicUrl('feed.xml');
+            // Direct fetch from the public Supabase bucket to avoid CORS/client issues
+            const publicUrl = "https://mfxnghmuccevsxwcetej.supabase.co/storage/v1/object/public/news-data/feed.xml";
             
-            if (data && data.publicUrl) {
-                // Fetch the actual XML content
-                const response = await fetch(data.publicUrl);
-                if (response.ok) {
-                    const xmlString = await response.text();
-                    const newArticles = window.AllianceNewsParser.parse(xmlString);
-                    if (newArticles.length > 0) {
-                        window.AppStore.addArticles(newArticles);
-                    }
+            const response = await fetch(publicUrl);
+            if (response.ok) {
+                const xmlString = await response.text();
+                const newArticles = window.AllianceNewsParser.parse(xmlString);
+                
+                if (newArticles.length > 0) {
+                    window.AppStore.addArticles(newArticles);
+                    document.getElementById('data-status-text').textContent = `${newArticles.length} Articles Loaded`;
                 } else {
-                    document.getElementById('data-status-text').textContent = "No data found";
+                    document.getElementById('data-status-text').textContent = "No valid articles found in feed";
                 }
+            } else {
+                document.getElementById('data-status-text').textContent = `Feed error: ${response.status}`;
             }
         } catch (error) {
-            console.error("Supabase fetch error:", error);
-            document.getElementById('data-status-text').textContent = "Connection Error";
+            console.error("Fetch error:", error);
+            document.getElementById('data-status-text').textContent = "Connection Error (Check console)";
         }
     },
     
